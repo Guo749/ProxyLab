@@ -74,6 +74,7 @@ void doit(int fd) {
 
     /* Parse URI from GET request */
     is_static = parse_uri(uri, filename, cgiargs);       //line:netp:doit:staticcheck
+
     if (stat(filename, &sbuf) < 0) {                     //line:netp:doit:beginnotfound
         clienterror(fd, filename, "404", "Not found",
                     "Tiny couldn't find this file");
@@ -127,8 +128,11 @@ int parse_uri(char *uri, char *filename, char *cgiargs) {
         strcpy(cgiargs, "");                             //line:netp:parseuri:clearcgi
         strcpy(filename, ".");                           //line:netp:parseuri:beginconvert1
         strcat(filename, uri);                           //line:netp:parseuri:endconvert1
+
         if (uri[strlen(uri) - 1] == '/')                   //line:netp:parseuri:slashcheck
             strcat(filename, "home.html");               //line:netp:parseuri:appenddefault
+
+
         return 1;
     } else {  /* Dynamic content */                        //line:netp:parseuri:isdynamic
         ptr = index(uri, '?');                           //line:netp:parseuri:beginextract
