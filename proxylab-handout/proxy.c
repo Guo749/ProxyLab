@@ -10,55 +10,67 @@
 /* You won't lose style points for including this long line in your code */
 static const char *user_agent_hdr = "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:10.0.3) Gecko/20120305 Firefox/10.0.3\r\n";
 
-void handleRequest(int connfd);
-void clientError(int fd, char* cause, char* errnum, char* shortmsg, char* longmsg);
-void readRequestHeader(rio_t* rp, char* clientRequestP);
-int checkGetMethod(char* uri, char* fileName, char* cgiargs);
-void readResponseHeader(char* tinyResponseP, rio_t* rio);
+void handleWrite(){
+    if(errno == EPIPE){
+        printf("we catch you, you mother fucker");
+        return;
+    }
+}
 
+void handleRequest(int );
+void clientError(int , char* , char* , char* , char* );
+int readAndFormatRequestHeader(rio_t* , char* , char* , char* , char* , char*, char* );
+int checkGetMethod(char* , char* , char* );
+void readResponseHeader(char* , rio_t* );
+void replaceHTTPVersion(char* );
+void parseLine(char* , char* , char* , char* , char*, char* );
 
 void handleRequest(int fd){
-    char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE];
-    char clientRequest[MAXLINE], *clientRequestP = clientRequest;
-    rio_t rio;
+    /* the argument used to parse the first line of http request */
+    char buf[MAXLINE], method[MAXLINE / 4], uri[MAXLINE / 4], version[MAXLINE / 4], resc[MAXLINE / 4];
 
-    Rio_readinitb(&rio, fd);
+    /* client request header and body */
+    char clientRequest[MAXLINE];
+
+    /* request header */
+    char Host[MAXLINE];
+
+    /* IO for proxy--client,  proxy-server */
+    rio_t rio, rioTiny;
 
     /** step1: read request from client */
+    Rio_readinitb(&rio, fd);
     if(Rio_readlineb(&rio, buf, MAXLINE) == 0){
         //the request has the empty space
         printf("empty request\n");
         return;
     }
+  
+    /* if start with 1.1, we change it to 1.0 */
+    replaceHTTPVersion(buf);
 
-    printf("-------- client request first line start -----------\n");
-    printf("%s", buf);
-    strcpy(clientRequest, buf);
-    clientRequestP += strlen(buf);
-    printf("-------- client request first line end-----------\n");
-
-    sscanf(buf, "%s %s %s", method, uri, version);
-
+    /* parse one line request line into several parts */
+    parseLine(buf, Host, method, uri, version, resc);
+    
     /** step2: determine if it is a valid request */
     if(strcasecmp(method, "GET") != 0){
         clientError(fd, method, "501", "Not Implemented", "Tiny Does not implement this method");
         return;
     }
 
-    readRequestHeader(&rio, clientRequestP);
+    int rv = readAndFormatRequestHeader(&rio, clientRequest, Host, method, uri, version, resc);
+    if(rv == 0){ // bad request, ignore it
+        return;
+    }
+    
+    printf("========= we have formatted the reqeust into ---------\n");
+    printf("%s", clientRequest);
 
     /** step3: establish own connection with tiny server
      *         and forward the request to the client
      * */
-    printf("what we got when reaching here ----- \n");
-    printf("%s", clientRequest);
+    int clientfd = Open_clientfd(TINY_HOST_NAME, TINY_LISTEN_PORT);
 
-    char* hostName = TINY_HOST_NAME;
-    char* port = TINY_LISTEN_PORT;
-    int clientfd = Open_clientfd(hostName, port);
-
-
-    rio_t rioTiny;
     Rio_readinitb(&rioTiny, clientfd);
     Rio_writen(rioTiny.rio_fd, clientRequest, strlen(clientRequest));
 
@@ -88,24 +100,85 @@ void readResponseHeader(char* tinyResponseP, rio_t* rio){
     }
 }
 
-void readRequestHeader(rio_t* rp, char* clientRequestP){
+int readAndFormatRequestHeader(rio_t* rio, char* clientRequest, char* Host, 
+                        char* method, char* uri, char* version, char* resc){
+    int UserAgent = 0, Connection = 0, ProxyConnection = 0;
     char buf[MAXLINE];
-    Rio_readlineb(rp, buf, MAXLINE);
+    int n;
 
-    strcpy(clientRequestP, buf);
-    clientRequestP += strlen(buf);
+    /* 1. add GET HOSTNAME HTTP/1.0 to header && Host Info */
+    sprintf(clientRequest, "GET %s HTTP/1.0\r\n", resc);
+    sprintf(buf, "Host: %s\r\n", Host);
+    strcat(clientRequest, buf);
 
-    printf("%s", buf);
-    while(strcmp("\r\n", buf) != 0){
-        Rio_readlineb(rp, buf, MAXLINE);
+    n = Rio_readlineb(rio, buf, MAXLINE);
+    char* findp;
+    while(strcmp("\r\n", buf) != 0 && n != 0){
+        strcat(clientRequest, buf);
 
-        strcpy(clientRequestP, buf);
-        clientRequestP += strlen(buf);
+        if( (findp = strstr(buf, "User-Agent:")) != NULL){
+            UserAgent = 1;
+        }else if( (findp = strstr(buf, "Connection:")) != NULL){
+            Connection = 1;
+        }else if( (findp = strstr(buf, "Proxy-Connection:")) != NULL){
+            ProxyConnection = 1;
+        }
 
-        printf("%s", buf);
+        n = Rio_readlineb(rio, buf, MAXLINE);
     }
 
-    return;
+    if(n == 0){
+        return 0;
+    }
+
+    /** append User-Agent */
+    if(UserAgent == 0){
+        strcat(clientRequest, user_agent_hdr);
+    }
+    
+    /** append Connection */
+    if(Connection == 0){
+        sprintf(buf, "Connection: close\r\n");
+        strcat(clientRequest, buf);
+    }
+    
+    /** append Proxy-Connection */
+    if(ProxyConnection == 0){
+        sprintf(buf, "Proxy-Connection: close\r\n");
+        strcat(clientRequest, buf);
+    }
+
+    /* add terminator for request */
+    strcat(clientRequest, "\r\n");
+    return 1;
+}
+
+
+void replaceHTTPVersion(char* buf){
+    char* pos = NULL;
+    if( (pos = strstr(buf, "HTTP/1.1")) != NULL){
+        buf[pos - buf + strlen("HTTP/1.1") - 1] = '0';
+    }
+}
+
+/**
+ * @param: client request is like this
+ *          GET http://www.cmu.edu/hub/index.html HTTP/1.1
+ * @function: we will parse that into differnt parameters
+ */
+void parseLine(char* buf, char* Host, char* method, char* uri, char* version, char* resc){
+    sscanf(buf, "%s %s %s", method, uri, version);
+
+    /* get host name if possible */
+    char* hostp = NULL;
+    if( (hostp = strstr(buf, "www.")) != NULL){
+        char* slash = strstr(hostp, "/");
+        char* space = strstr(slash, " ");
+        strncpy(Host, hostp, slash - hostp);
+        strncpy(resc, slash, space - slash);
+    }else{
+        strcpy(resc, "/");
+    }
 }
 
 void clientError(int fd, char* cause, char* errnum, char* shortmsg, char* longmsg){
@@ -150,7 +223,4 @@ int main(int argc, char** argv){
         Close(connfd);
     }
 
-
-    printf("%s", user_agent_hdr);
-    return 0;
 }

@@ -1,0 +1,4 @@
+rm -f *~ *.o proxy core *.tar *.zip *.gzip *.bzip *.gz
+gcc -g -Wall -c proxy.c
+gcc -g -Wall -c csapp.c
+gcc -g -Wall proxy.o csapp.o -o proxy -lpthread

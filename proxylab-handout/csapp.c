@@ -31,6 +31,7 @@
 /* $begin unixerror */
 void unix_error(char *msg) /* Unix-style error */
 {
+    printf("%s: %s\n", msg, strerror(errno));
     fprintf(stderr, "%s: %s\n", msg, strerror(errno));
     exit(0);
 }
@@ -843,7 +844,7 @@ ssize_t Rio_readn(int fd, void *ptr, size_t nbytes) {
 }
 
 void Rio_writen(int fd, void *usrbuf, size_t n) {
-    if (rio_writen(fd, usrbuf, n) != n)
+    if (rio_writen(fd, usrbuf, n) != n && errno != EPIPE)
         unix_error("Rio_writen error");
 }
 
@@ -862,8 +863,10 @@ ssize_t Rio_readnb(rio_t *rp, void *usrbuf, size_t n) {
 ssize_t Rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen) {
     ssize_t rc;
 
-    if ((rc = rio_readlineb(rp, usrbuf, maxlen)) < 0)
+    if ((rc = rio_readlineb(rp, usrbuf, maxlen)) < 0){
+        printf("reach here \n");
         unix_error("Rio_readlineb error");
+    }
     return rc;
 }
 

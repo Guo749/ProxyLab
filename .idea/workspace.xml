@@ -28,20 +28,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2ee2933d-8c9c-4940-91d4-b808ee22e68b" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/proxylab-handout/CMakeLists.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/proxylab-handout/csapp.o" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/proxylab-handout/proxy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/proxylab-handout/proxy.o" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/proxylab-handout/run.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/proxy_note.md" beforeDir="false" afterPath="$PROJECT_DIR$/proxy_note.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/proxylab-handout/csapp.c" beforeDir="false" afterPath="$PROJECT_DIR$/proxylab-handout/csapp.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/proxylab-handout/proxy.c" beforeDir="false" afterPath="$PROJECT_DIR$/proxylab-handout/proxy.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/proxylab-handout/tiny/cgi-bin/adder" beforeDir="false" afterPath="$PROJECT_DIR$/proxylab-handout/tiny/cgi-bin/adder" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/proxylab-handout/tiny/csapp.o" beforeDir="false" afterPath="$PROJECT_DIR$/proxylab-handout/tiny/csapp.o" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/proxylab-handout/tiny/tiny" beforeDir="false" afterPath="$PROJECT_DIR$/proxylab-handout/tiny/tiny" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/proxylab-handout/tiny/tiny.c" beforeDir="false" afterPath="$PROJECT_DIR$/proxylab-handout/tiny/tiny.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/proxylab.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/proxylab.pdf" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -93,7 +81,7 @@
       <option name="presentableId" value="Default" />
       <updated>1640911649995</updated>
       <workItem from="1640911651488" duration="584000" />
-      <workItem from="1640978176656" duration="7954000" />
+      <workItem from="1640978176656" duration="13159000" />
     </task>
     <servers />
   </component>
