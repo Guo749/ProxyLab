@@ -171,6 +171,7 @@ void serve_static(int fd, char *filename, int filesize) {
     srcfd = Open(filename, O_RDONLY, 0); //line:netp:servestatic:open
     srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0); //line:netp:servestatic:mmap
     Close(srcfd);                       //line:netp:servestatic:close
+    printf("file size is %d\n", filesize);
     Rio_writen(fd, srcp, filesize);     //line:netp:servestatic:write
     Munmap(srcp, filesize);             //line:netp:servestatic:munmap
 }

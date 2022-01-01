@@ -25,13 +25,13 @@ void parseLine(char* , char*, char* , char* , char* , char*, char*);
 
 void handleRequest(int fd){
     /* the argument used to parse the first line of http request */
-    char buf[MAXLINE], method[MAXLINE / 16], uri[MAXLINE / 16], version[MAXLINE / 16], fileName[MAXLINE / 16];
+    char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE], fileName[MAXLINE];
 
     /* client request header and body */
-    char clientRequest[MAXLINE / 2];
+    char clientRequest[MAXLINE];
 
     /* request header */
-    char host[MAXLINE / 16], port[MAXLINE / 16];
+    char host[MAXLINE], port[MAXLINE];
 
     /* IO for proxy--client,  proxy-server */
     rio_t rio, rioTiny;
@@ -66,23 +66,34 @@ void handleRequest(int fd){
 
     /** step3: establish own connection with tiny server
      *         and forward the request to the client
+     * localhost:1025
      * */
-    int clientfd = Open_clientfd("localhost", "15213");
+    char hostName[100];
+    char* colon = strstr(host, ":");
+    strncpy(hostName, host, colon - host);
+    printf("host is %s\n", hostName);
+    printf("port is %s\n", port);
+    int clientfd = Open_clientfd(hostName, port);
 
     Rio_readinitb(&rioTiny, clientfd);
     Rio_writen(rioTiny.rio_fd, clientRequest, strlen(clientRequest));
 
     /** step4: read the response from tiny and send it to the client */
-    char tinyResponse[MAXLINE / 2];
+    printf("---prepare to get the response---- \n");
+    char tinyResponse[5 * MAXLINE];
     char* tinyResponseP = tinyResponse;
 
     readResponseHeader(tinyResponseP, &rioTiny);
     /* send it to the client */
+    printf("----we got response like this ---\n");
+    printf("%s", tinyResponse);
+    printf("--- sending it to the client---- \n");
+    printf("we got %d bytes in tinyRepsonse\n", strlen(tinyResponse));
     Rio_writen(rio.rio_fd, tinyResponse, strlen(tinyResponse));
 }
 
 void readResponseHeader(char* tinyResponseP, rio_t* rio){
-    char buf[MAXLINE / 2];
+    char buf[MAXLINE];
     while( (Rio_readlineb(rio, buf, MAXLINE)) != 0 ){
         strcpy(tinyResponseP, buf);
         tinyResponseP += strlen(buf);
@@ -100,14 +111,12 @@ void readResponseHeader(char* tinyResponseP, rio_t* rio){
 
 int readAndFormatRequestHeader(rio_t* rio, char* clientRequest, char* Host, char* port,
                         char* method, char* uri, char* version, char* fileName){
-    int UserAgent = 0, Connection = 0, ProxyConnection = 0;
+    int UserAgent = 0, Connection = 0, ProxyConnection = 0, HostInfo = 0;
     char buf[MAXLINE / 2];
     int n;
 
     /* 1. add GET HOSTNAME HTTP/1.0 to header && Host Info */
     sprintf(clientRequest, "GET %s HTTP/1.0\r\n", fileName);
-    sprintf(buf, "Host: %s\r\n", Host);
-    strcat(clientRequest, buf);
 
     n = Rio_readlineb(rio, buf, MAXLINE);
     printf("receive buf %s\n", buf);
@@ -123,6 +132,8 @@ int readAndFormatRequestHeader(rio_t* rio, char* clientRequest, char* Host, char
             ProxyConnection = 1;
         }else if( (findp = strstr(buf, "Connection:")) != NULL){
             Connection = 1;
+        }else if( (findp = strstr(buf, "Host:")) != NULL){
+            HostInfo = 1;
         }
 
         n = Rio_readlineb(rio, buf, MAXLINE);
@@ -130,6 +141,11 @@ int readAndFormatRequestHeader(rio_t* rio, char* clientRequest, char* Host, char
 
     if(n == 0){
         return 0;
+    }
+
+    if(HostInfo == 0){
+        sprintf(buf, "Host: %s\r\n", Host);
+        strcat(clientRequest, buf);
     }
 
     /** append User-Agent */
