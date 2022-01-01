@@ -80,34 +80,15 @@ void handleRequest(int fd){
 
     /** step4: read the response from tiny and send it to the client */
     printf("---prepare to get the response---- \n");
-    char tinyResponse[5 * MAXLINE];
+    char tinyResponse[MAXLINE];
     char* tinyResponseP = tinyResponse;
 
-    readResponseHeader(tinyResponseP, &rioTiny);
-    /* send it to the client */
-    printf("----we got response like this ---\n");
-    printf("%s", tinyResponse);
-    printf("--- sending it to the client---- \n");
-    printf("we got %d bytes in tinyRepsonse\n", strlen(tinyResponse));
-    Rio_writen(rio.rio_fd, tinyResponse, strlen(tinyResponse));
-}
-
-void readResponseHeader(char* tinyResponseP, rio_t* rio){
-    char buf[MAXLINE];
-    while( (Rio_readlineb(rio, buf, MAXLINE)) != 0 ){
-        strcpy(tinyResponseP, buf);
-        tinyResponseP += strlen(buf);
-
-        /* have met the header */
-        if(strcmp(buf, "\r\n") == 0)
-            break;
-    }
-
-    while( (rio_readlineb(rio, buf, MAXLINE)) != 0){
-        strcpy(tinyResponseP, buf);
-        tinyResponseP += strlen(buf);
+    int n;
+    while( (n = rio_readlineb(&rioTiny, tinyResponse, MAXLINE)) != 0){
+        Rio_writen(fd, tinyResponse, n);
     }
 }
+
 
 int readAndFormatRequestHeader(rio_t* rio, char* clientRequest, char* Host, char* port,
                         char* method, char* uri, char* version, char* fileName){
