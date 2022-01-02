@@ -1,0 +1,23 @@
+*   Trying 127.0.0.1...
+* TCP_NODELAY set
+* Connected to localhost (127.0.0.1) port 15214 (#0)
+> GET http://localhost:15213/home.html HTTP/1.1
+> Host: localhost:15213
+> User-Agent: curl/7.58.0
+> Accept: */*
+> Proxy-Connection: Keep-Alive
+>
+* HTTP 1.0, assume close after body
+< HTTP/1.0 200 OK
+< Server: Tiny Web Server
+< Content-length: 120
+< Content-type: text/html
+<
+<html>
+<head><title>test</title></head>
+<body>
+<img align="middle" src="godzilla.gif">
+Dave O'Hallaron
+</body>
+</html>
+* Closing connection 0
