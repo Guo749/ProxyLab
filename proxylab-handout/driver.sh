@@ -268,76 +268,75 @@ basicScore=`expr ${MAX_BASIC} \* ${numSucceeded} / ${numRun}`
 echo "basicScore: $basicScore/${MAX_BASIC}"
 
 
-# ######
-# # Concurrency
-# #
+######
+# Concurrency
+#
 
-# echo ""
-# echo "*** Concurrency ***"
+echo ""
+echo "*** Concurrency ***"
 
-# # Run the Tiny Web server
-# tiny_port=$(free_port)
-# echo "Starting tiny on port ${tiny_port}"
-# cd ./tiny
-# ./tiny ${tiny_port} &> /dev/null &
-# tiny_pid=$!
-# cd ${HOME_DIR}
+# Run the Tiny Web server
+tiny_port=$(free_port)
+echo "Starting tiny on port ${tiny_port}"
+cd ./tiny
+./tiny ${tiny_port} &> /dev/null &
+tiny_pid=$!
+cd ${HOME_DIR}
 
-# # Wait for tiny to start in earnest
-# wait_for_port_use "${tiny_port}"
+# Wait for tiny to start in earnest
+wait_for_port_use "${tiny_port}"
 
-# # Run the proxy
-# proxy_port=$(free_port)
-# echo "Starting proxy on port ${proxy_port}"
-# ./proxy ${proxy_port} &> /dev/null &
-# proxy_pid=$!
+# Run the proxy
+proxy_port=$(free_port)
+echo "Starting proxy on port ${proxy_port}"
+./proxy ${proxy_port} &> /dev/null &
+proxy_pid=$!
 
-# # Wait for the proxy to start in earnest
-# wait_for_port_use "${proxy_port}"
+# Wait for the proxy to start in earnest
+wait_for_port_use "${proxy_port}"
 
-# # Run a special blocking nop-server that never responds to requests
-# nop_port=$(free_port)
-# echo "Starting the blocking NOP server on port ${nop_port}"
-# ./nop-server.py ${nop_port} &> /dev/null &
-# nop_pid=$!
+# Run a special blocking nop-server that never responds to requests
+nop_port=$(free_port)
+echo "Starting the blocking NOP server on port ${nop_port}"
+python3.8 nop-server.py ${nop_port} &> /dev/null &
+nop_pid=$!
 
-# # Wait for the nop server to start in earnest
-# wait_for_port_use "${nop_port}"
+# Wait for the nop server to start in earnest
+wait_for_port_use "${nop_port}"
+# Try to fetch a file from the blocking nop-server using the proxy
+clear_dirs
+echo "Trying to fetch a file from the blocking nop-server"
+download_proxy $PROXY_DIR "nop-file.txt" "http://localhost:${nop_port}/nop-file.txt" "http://localhost:${proxy_port}" &
 
-# # Try to fetch a file from the blocking nop-server using the proxy
-# clear_dirs
-# echo "Trying to fetch a file from the blocking nop-server"
-# download_proxy $PROXY_DIR "nop-file.txt" "http://localhost:${nop_port}/nop-file.txt" "http://localhost:${proxy_port}" &
+# Fetch directly from Tiny
+echo "Fetching ./tiny/${FETCH_FILE} into ${NOPROXY_DIR} directly from Tiny"
+download_noproxy $NOPROXY_DIR ${FETCH_FILE} "http://localhost:${tiny_port}/${FETCH_FILE}"
 
-# # Fetch directly from Tiny
-# echo "Fetching ./tiny/${FETCH_FILE} into ${NOPROXY_DIR} directly from Tiny"
-# download_noproxy $NOPROXY_DIR ${FETCH_FILE} "http://localhost:${tiny_port}/${FETCH_FILE}"
+# Fetch using the proxy
+echo "Fetching ./tiny/${FETCH_FILE} into ${PROXY_DIR} using the proxy"
+download_proxy $PROXY_DIR ${FETCH_FILE} "http://localhost:${tiny_port}/${FETCH_FILE}" "http://localhost:${proxy_port}"
 
-# # Fetch using the proxy
-# echo "Fetching ./tiny/${FETCH_FILE} into ${PROXY_DIR} using the proxy"
-# download_proxy $PROXY_DIR ${FETCH_FILE} "http://localhost:${tiny_port}/${FETCH_FILE}" "http://localhost:${proxy_port}"
+# See if the proxy fetch succeeded
+echo "Checking whether the proxy fetch succeeded"
+diff -q ${PROXY_DIR}/${FETCH_FILE} ${NOPROXY_DIR}/${FETCH_FILE} &> /dev/null
+if [ $? -eq 0 ]; then
+    concurrencyScore=${MAX_CONCURRENCY}
+    echo "Success: Was able to fetch tiny/${FETCH_FILE} from the proxy."
+else
+    concurrencyScore=0
+    echo "Failure: Was not able to fetch tiny/${FETCH_FILE} from the proxy."
+fi
 
-# # See if the proxy fetch succeeded
-# echo "Checking whether the proxy fetch succeeded"
-# diff -q ${PROXY_DIR}/${FETCH_FILE} ${NOPROXY_DIR}/${FETCH_FILE} &> /dev/null
-# if [ $? -eq 0 ]; then
-#     concurrencyScore=${MAX_CONCURRENCY}
-#     echo "Success: Was able to fetch tiny/${FETCH_FILE} from the proxy."
-# else
-#     concurrencyScore=0
-#     echo "Failure: Was not able to fetch tiny/${FETCH_FILE} from the proxy."
-# fi
+# Clean up
+echo "Killing tiny, proxy, and nop-server"
+kill $tiny_pid 2> /dev/null
+wait $tiny_pid 2> /dev/null
+kill $proxy_pid 2> /dev/null
+wait $proxy_pid 2> /dev/null
+kill $nop_pid 2> /dev/null
+wait $nop_pid 2> /dev/null
 
-# # Clean up
-# echo "Killing tiny, proxy, and nop-server"
-# kill $tiny_pid 2> /dev/null
-# wait $tiny_pid 2> /dev/null
-# kill $proxy_pid 2> /dev/null
-# wait $proxy_pid 2> /dev/null
-# kill $nop_pid 2> /dev/null
-# wait $nop_pid 2> /dev/null
-
-# echo "concurrencyScore: $concurrencyScore/${MAX_CONCURRENCY}"
+echo "concurrencyScore: $concurrencyScore/${MAX_CONCURRENCY}"
 
 # #####
 # # Caching

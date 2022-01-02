@@ -1,20 +1,20 @@
 #include "csapp.h"
+#include "sbuf.h"
+
 
 /* Recommended max cache and object sizes */
 #define MAX_CACHE_SIZE 1049000
 #define MAX_OBJECT_SIZE 102400
 #define WEB_PREFIX "http://"
+#define NTHREADS 4
+#define SBUFSIZE 16
 
 /* You won't lose style points for including this long line in your code */
 static const char *user_agent_hdr = "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:10.0.3) Gecko/20120305 Firefox/10.0.3\r\n";
 
-void handleWrite(){
-    if(errno == EPIPE){
-        printf("we catch you, you mother fucker");
-        return;
-    }
-}
+sbuf_t sbuf; /* Shared buffer of connected descriptors */
 
+void* thread(void* vargp);
 void handleRequest(int);
 void clientError(int , char* , char* , char* , char* );
 int readAndFormatRequestHeader(rio_t* , char* , char*, char* , char* , char* , char*, char*);
@@ -80,7 +80,6 @@ void handleRequest(int fd){
     /** step4: read the response from tiny and send it to the client */
     printf("---prepare to get the response---- \n");
     char tinyResponse[MAXLINE];
-    char* tinyResponseP = tinyResponse;
 
     int n;
     while( (n = Rio_readnb(&rioTiny, tinyResponse, MAXLINE)) != 0){
@@ -200,24 +199,36 @@ void clientError(int fd, char* cause, char* errnum, char* shortmsg, char* longms
     Rio_writen(fd, buf, strlen(buf));
 }
 
+void* thread(void* vargp){
+    Pthread_detach(pthread_self());
+    while(1){
+        int connfd = sbuf_remove(&sbuf);
+        handleRequest(connfd);
+        Close(connfd);
+    }
+}
+
 int main(int argc, char** argv){
     if(argc != 2){
         unix_error("proxy usage: ./proxy <port number>");
     }
 
-    int listenfd = Open_listenfd(argv[1]);
+    int listenfd = Open_listenfd(argv[1]), i;
+    pthread_t tid;
     struct sockaddr_storage clientAddr;
     char hostName[MAXLINE], port[MAXLINE];
+    sbuf_init(&sbuf, SBUFSIZE);
+
+    for(i = 0; i < NTHREADS; i++){
+        Pthread_create(&tid, NULL, thread, NULL);
+    }
 
     while(1){
         socklen_t addrLen = sizeof(struct sockaddr_storage);
         int connfd = Accept(listenfd, (SA*)&clientAddr, &addrLen);
-
         Getnameinfo((SA*)&clientAddr, addrLen, hostName, MAXLINE, port, MAXLINE, 0);
         printf("Accepting Connection from (%s, %s) \n", hostName, port);
-
-        handleRequest(connfd);
-        Close(connfd);
+        sbuf_insert(&sbuf, connfd);
     }
 
 }
