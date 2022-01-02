@@ -15,11 +15,10 @@ void handleWrite(){
     }
 }
 
-void handleRequest(int );
+void handleRequest(int);
 void clientError(int , char* , char* , char* , char* );
 int readAndFormatRequestHeader(rio_t* , char* , char*, char* , char* , char* , char*, char*);
 int checkGetMethod(char* , char* , char* );
-void readResponseHeader(char* , rio_t* );
 void replaceHTTPVersion(char* );
 void parseLine(char* , char*, char* , char* , char* , char*, char*);
 
@@ -84,7 +83,7 @@ void handleRequest(int fd){
     char* tinyResponseP = tinyResponse;
 
     int n;
-    while( (n = rio_readlineb(&rioTiny, tinyResponse, MAXLINE)) != 0){
+    while( (n = Rio_readnb(&rioTiny, tinyResponse, MAXLINE)) != 0){
         Rio_writen(fd, tinyResponse, n);
     }
 }
