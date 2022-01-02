@@ -1,8 +1,3 @@
-HTTP/1.0 200 OK
-Server: Tiny Web Server
-Content-length: 24035
-Content-type: text/plain
-
 /* 
  * csapp.c - Functions for the CS:APP3e book
  *

@@ -29,7 +29,7 @@ void replaceHTTPVersion(char* );
 void parseLine(char* , char*, char* , char* , char* , char*, char*);
 void readAndWriteResponse(int , rio_t*, char* uri);
 void writeToCache(obj_t* );
-int readItem(char* , int );
+obj_t* readItem(char* , int );
 
 void handleRequest(int fd){
     /* the argument used to parse the first line of http request */
@@ -94,11 +94,15 @@ void handleRequest(int fd){
 }
 
 void readAndWriteResponse(int fd, rio_t* rioTiny, char* uri){
-    // int rv = readItem(uri, fd);
-    // if(rv != 0){ // we send it using cache
-    //     printf("======we are using cache to send the response back ====\n");
-    //     return;
-    // }
+    obj_t* rv = readItem(uri, fd);
+    if(rv != NULL){ // we send it using cache
+        printf("======we are using cache to send the response back ====\n");
+        
+        Rio_writen(fd, rv->respHeader, rv->respHeaderLen);
+        Rio_writen(fd, CR, strlen(CR));
+        Rio_writen(fd, rv->respBody  , rv->respBodyLen);
+        return;
+    }
 
     char tinyResponse[MAXLINE];
     int n, totalBytes = 0;
@@ -268,9 +272,8 @@ void* thread(void* vargp){
     }
 }
 
-int readItem(char* targetURI, int clientfd){
-    int flag = 0;
-    char buf[MAXLINE];
+obj_t* readItem(char* targetURI, int clientfd){
+
 
     P(&mutex);
     readcnt++;
@@ -281,28 +284,16 @@ int readItem(char* targetURI, int clientfd){
 
     /***** reading section starts *****/
     obj_t* cur = cache.head->next;
-    int pos = 1;
     rio_t rio;
     Rio_readinitb(&rio, clientfd);
     while(cur->flag != '@'){
         if(strcmp(targetURI, cur->uri) == 0){
-            break;
+            return cur;
         }
 
         cur = cur->next;
-        pos++;
     }
 
-    flag = cur->flag == '@' ? 0 : pos;
-    char*left = cur->respBody, *right = cur->respBody;
-    while( (right = strstr(left, "\n")) != NULL){
-        strncpy(buf, left, right - left + 1);
-        Rio_writen(clientfd, buf, strlen(buf));
-        left = right + 1;
-    }
-    
-    Rio_writen(clientfd, CR, strlen(CR));
-    Rio_writen(clientfd, cur->respBody, strlen(cur->respBody));
 
     /***** reading section ends *****/
     P(&mutex);
@@ -312,7 +303,7 @@ int readItem(char* targetURI, int clientfd){
     }
     V(&mutex);
 
-    return flag;
+    return NULL;
 }
 
 /*

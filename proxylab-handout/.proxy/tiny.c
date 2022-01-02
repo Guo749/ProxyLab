@@ -1,8 +1,3 @@
-HTTP/1.0 200 OK
-Server: Tiny Web Server
-Content-length: 9035
-Content-type: text/plain
-
 /* $begin tinymain */
 /*
  * tiny.c - A simple, iterative HTTP/1.0 Web server that uses the 
