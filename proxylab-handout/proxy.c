@@ -64,14 +64,24 @@ void handleRequest(int fd){
         return;
     }
 
-    int rv = readAndFormatRequestHeader(&rio, clientRequest, host, port, method, uri, version, fileName);
-    if(rv == 0){ // bad request, ignore it
+    int rvv = readAndFormatRequestHeader(&rio, clientRequest, host, port, method, uri, version, fileName);
+    if(rvv == 0){ // bad request, ignore it
         return;
     }
     
     printf("========= $$BEGIN we have formatted the reqeust into $$=========\n");
     printf("%s", clientRequest);
     printf("========= $$END we have formatted the reqeust into $$=========\n");
+
+    obj_t* rv = readItem(uri, fd);
+    if(rv != NULL){ // we send it using cache
+        printf("======we are using cache to send the response back ====\n");
+
+        Rio_writen(fd, rv->respHeader, rv->respHeaderLen);
+        Rio_writen(fd, CR, strlen(CR));
+        Rio_writen(fd, rv->respBody  , rv->respBodyLen);
+        return;
+    }
     /** step3: establish own connection with tiny server
      *         and forward the request to the client
      * localhost:1025
@@ -94,16 +104,6 @@ void handleRequest(int fd){
 }
 
 void readAndWriteResponse(int fd, rio_t* rioTiny, char* uri){
-    obj_t* rv = readItem(uri, fd);
-    if(rv != NULL){ // we send it using cache
-        printf("======we are using cache to send the response back ====\n");
-        
-        Rio_writen(fd, rv->respHeader, rv->respHeaderLen);
-        Rio_writen(fd, CR, strlen(CR));
-        Rio_writen(fd, rv->respBody  , rv->respBodyLen);
-        return;
-    }
-
     char tinyResponse[MAXLINE];
     int n, totalBytes = 0;
     //new response
@@ -273,8 +273,6 @@ void* thread(void* vargp){
 }
 
 obj_t* readItem(char* targetURI, int clientfd){
-
-
     P(&mutex);
     readcnt++;
     if(readcnt == 1){
