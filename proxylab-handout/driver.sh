@@ -341,68 +341,68 @@ echo "concurrencyScore: $concurrencyScore/${MAX_CONCURRENCY}"
 #####
 # Caching
 #
-echo ""
-echo "*** Cache ***"
+# echo ""
+# echo "*** Cache ***"
 
-# Run the Tiny Web server
-tiny_port=$(free_port)
-echo "Starting tiny on port ${tiny_port}"
-cd ./tiny
-./tiny ${tiny_port} &> /dev/null &
-tiny_pid=$!
-cd ${HOME_DIR}
+# # Run the Tiny Web server
+# tiny_port=$(free_port)
+# echo "Starting tiny on port ${tiny_port}"
+# cd ./tiny
+# ./tiny ${tiny_port} &> /dev/null &
+# tiny_pid=$!
+# cd ${HOME_DIR}
 
-# Wait for tiny to start in earnest
-wait_for_port_use "${tiny_port}"
+# # Wait for tiny to start in earnest
+# wait_for_port_use "${tiny_port}"
 
-# Run the proxy
-proxy_port=$(free_port)
-echo "Starting proxy on port ${proxy_port}"
-./proxy ${proxy_port} &> /dev/null &
-proxy_pid=$!
+# # Run the proxy
+# proxy_port=$(free_port)
+# echo "Starting proxy on port ${proxy_port}"
+# ./proxy ${proxy_port} &> /dev/null &
+# proxy_pid=$!
 
-# Wait for the proxy to start in earnest
-wait_for_port_use "${proxy_port}"
+# # Wait for the proxy to start in earnest
+# wait_for_port_use "${proxy_port}"
 
-# Fetch some files from tiny using the proxy
-clear_dirs
-for file in ${CACHE_LIST}
-do
-    echo "Fetching ./tiny/${file} into ${PROXY_DIR} using the proxy"
-    download_proxy $PROXY_DIR ${file} "http://localhost:${tiny_port}/${file}" "http://localhost:${proxy_port}"
-done
+# # Fetch some files from tiny using the proxy
+# clear_dirs
+# for file in ${CACHE_LIST}
+# do
+#     echo "Fetching ./tiny/${file} into ${PROXY_DIR} using the proxy"
+#     download_proxy $PROXY_DIR ${file} "http://localhost:${tiny_port}/${file}" "http://localhost:${proxy_port}"
+# done
 
-# Kill Tiny
-echo "Killing tiny"
-kill $tiny_pid 2> /dev/null
-wait $tiny_pid 2> /dev/null
+# # Kill Tiny
+# echo "Killing tiny"
+# kill $tiny_pid 2> /dev/null
+# wait $tiny_pid 2> /dev/null
 
-# Now try to fetch a cached copy of one of the fetched files.
-echo "Fetching a cached copy of ./tiny/${FETCH_FILE} into ${NOPROXY_DIR}"
-download_proxy $NOPROXY_DIR ${FETCH_FILE} "http://localhost:${tiny_port}/${FETCH_FILE}" "http://localhost:${proxy_port}"
+# # Now try to fetch a cached copy of one of the fetched files.
+# echo "Fetching a cached copy of ./tiny/${FETCH_FILE} into ${NOPROXY_DIR}"
+# download_proxy $NOPROXY_DIR ${FETCH_FILE} "http://localhost:${tiny_port}/${FETCH_FILE}" "http://localhost:${proxy_port}"
 
-# See if the proxy fetch succeeded by comparing it with the original
-# file in the tiny directory
-diff -q ./tiny/${FETCH_FILE} ${NOPROXY_DIR}/${FETCH_FILE}  &> /dev/null
-if [ $? -eq 0 ]; then
-    cacheScore=${MAX_CACHE}
-    echo "Success: Was able to fetch tiny/${FETCH_FILE} from the cache."
-else
-    cacheScore=0
-    echo "Failure: Was not able to fetch tiny/${FETCH_FILE} from the proxy cache."
-fi
+# # See if the proxy fetch succeeded by comparing it with the original
+# # file in the tiny directory
+# diff -q ./tiny/${FETCH_FILE} ${NOPROXY_DIR}/${FETCH_FILE}  &> /dev/null
+# if [ $? -eq 0 ]; then
+#     cacheScore=${MAX_CACHE}
+#     echo "Success: Was able to fetch tiny/${FETCH_FILE} from the cache."
+# else
+#     cacheScore=0
+#     echo "Failure: Was not able to fetch tiny/${FETCH_FILE} from the proxy cache."
+# fi
 
-# Kill the proxy
-echo "Killing proxy"
-kill $proxy_pid 2> /dev/null
-wait $proxy_pid 2> /dev/null
+# # Kill the proxy
+# echo "Killing proxy"
+# kill $proxy_pid 2> /dev/null
+# wait $proxy_pid 2> /dev/null
 
-echo "cacheScore: $cacheScore/${MAX_CACHE}"
+# echo "cacheScore: $cacheScore/${MAX_CACHE}"
 
-# Emit the total score
-totalScore=`expr ${basicScore} + ${cacheScore} + ${concurrencyScore}`
-maxScore=`expr ${MAX_BASIC} + ${MAX_CACHE} + ${MAX_CONCURRENCY}`
-echo ""
-echo "totalScore: ${totalScore}/${maxScore}"
-exit
+# # Emit the total score
+# totalScore=`expr ${basicScore} + ${cacheScore} + ${concurrencyScore}`
+# maxScore=`expr ${MAX_BASIC} + ${MAX_CACHE} + ${MAX_CONCURRENCY}`
+# echo ""
+# echo "totalScore: ${totalScore}/${maxScore}"
+# exit
 

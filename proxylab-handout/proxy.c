@@ -352,7 +352,7 @@ int main(int argc, char** argv){
 
     /* initialize the read / write lock*/
     readcnt = 0;
-    Sem_init(&mutex, 0, READER_SAME_TIME);
+    Sem_init(&mutex, 0, 1);
     Sem_init(&W    , 0, 1);
 
     while(1){
